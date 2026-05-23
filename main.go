@@ -72,6 +72,15 @@ func main() {
 func registerHandlers(api huma.API, handlers *handler.Handler) {
 	// Link API
 	grp := huma.NewGroup(api, "/api/v1")
+	grp.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
+		ctx.SetHeader("Test-Header", "123")
+
+		userAgent := ctx.Header("User-Agent")
+		log.Println(userAgent)
+
+		ctx = huma.WithValue(ctx, "userID", "123")
+		next(ctx)
+	})
 
 	huma.Register(grp, huma.Operation{
 		Method:      http.MethodPost,

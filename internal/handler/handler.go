@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"test/internal/repository/cache"
 	"test/internal/utils"
@@ -19,6 +20,8 @@ func New(cache *cache.Cache) *Handler {
 
 func (h *Handler) AddLink(ctx context.Context, input *CreateShortLink) (*ShortLinkOutput, error) {
 	url := input.Body.URL
+
+	fmt.Println(ctx.Value("userID"))
 
 	for i := 0; i < 5; i++ {
 		ID, err := utils.RandomID()
