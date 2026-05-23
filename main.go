@@ -18,6 +18,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+const version = "0.0.1"
+
 func main() {
 	// Init temp DB
 	cache, err := cache.New()
@@ -115,7 +117,7 @@ func humaConfig() huma.Config {
 		Unmarshal: sonic.Unmarshal,
 	}
 
-	cfg := huma.DefaultConfig("Url Shortener", "0.0.1")
+	cfg := huma.DefaultConfig("Url Shortener", version)
 	cfg.FieldsOptionalByDefault = false
 	cfg.Formats = map[string]huma.Format{"sonic": SonicJSON}
 	cfg.DefaultFormat = "sonic"

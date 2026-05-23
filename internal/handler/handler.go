@@ -20,19 +20,21 @@ func New(cache *cache.Cache) *Handler {
 func (h *Handler) AddLink(ctx context.Context, input *CreateShortLink) (*ShortLinkOutput, error) {
 	url := input.Body.URL
 
-	ID, err := utils.RandomID()
-	if err != nil {
-		return nil, unknownError
+	for i := 0; i < 5; i++ {
+		ID, err := utils.RandomID()
+		if err != nil {
+			continue
+		}
+
+		err = h.cache.CreateLink(ctx, url, ID)
+		if err == nil {
+			resp := &ShortLinkOutput{}
+			resp.Body.ID = ID
+			return resp, nil
+		}
 	}
 
-	err = h.cache.CreateLink(ctx, url, ID)
-	if err != nil {
-		return nil, unknownError
-	}
-
-	resp := &ShortLinkOutput{}
-	resp.Body.ID = ID
-	return resp, nil
+	return nil, unknownError
 }
 
 func (h *Handler) GetLink(ctx context.Context, input *GetLink) (*InfoLink, error) {
