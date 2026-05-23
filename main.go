@@ -19,36 +19,55 @@ import (
 )
 
 func main() {
+	// Init temp DB
 	cache, err := cache.New()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	// Create a new router & API
 	router := chi.NewMux()
 
 	// Huma config
-	var SonicJSON = huma.Format{
-		Marshal: func(writer io.Writer, v any) error {
-			data, err := sonic.Marshal(v)
-			if err != nil {
-				return err
-			}
-
-			_, err = writer.Write(data)
-			return err
-		},
-		Unmarshal: sonic.Unmarshal,
-	}
-
-	cfg := huma.DefaultConfig("Url Shortener", "0.0.1")
-	cfg.FieldsOptionalByDefault = false
-	cfg.Formats = map[string]huma.Format{"sonic": SonicJSON}
-	cfg.DefaultFormat = "sonic"
+	cfg := humaConfig()
 
 	// Create server
 	api := humachi.New(router, cfg)
 	handlers := handler.New(cache)
+	registerHandlers(api, handlers)
 
+	// Start server
+	server := &http.Server{
+		Addr:    ":8888",
+		Handler: router,
+
+		ReadTimeout:       time.Second * 5,
+		ReadHeaderTimeout: time.Second * 5,
+		WriteTimeout:      time.Second * 5,
+	}
+
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutdown...")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func registerHandlers(api huma.API, handlers *handler.Handler) {
 	// Link API
 	grp := huma.NewGroup(api, "/api/v1")
 
@@ -80,33 +99,26 @@ func main() {
 		Errors:        []int{http.StatusNotFound},
 		DefaultStatus: http.StatusTemporaryRedirect,
 	}, handlers.RedirectLink)
+}
 
-	// Start server
-	server := &http.Server{
-		Addr:    ":8888",
-		Handler: router,
+func humaConfig() huma.Config {
+	var SonicJSON = huma.Format{
+		Marshal: func(writer io.Writer, v any) error {
+			data, err := sonic.Marshal(v)
+			if err != nil {
+				return err
+			}
 
-		ReadTimeout:       time.Second * 5,
-		ReadHeaderTimeout: time.Second * 5,
-		WriteTimeout:      time.Second * 5,
+			_, err = writer.Write(data)
+			return err
+		},
+		Unmarshal: sonic.Unmarshal,
 	}
 
-	go func() {
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
-	}()
+	cfg := huma.DefaultConfig("Url Shortener", "0.0.1")
+	cfg.FieldsOptionalByDefault = false
+	cfg.Formats = map[string]huma.Format{"sonic": SonicJSON}
+	cfg.DefaultFormat = "sonic"
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutdown...")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatal(err)
-	}
+	return cfg
 }
