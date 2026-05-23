@@ -110,7 +110,6 @@ func humaConfig() huma.Config {
 			if err != nil {
 				return err
 			}
-
 			_, err = writer.Write(data)
 			return err
 		},
@@ -119,8 +118,12 @@ func humaConfig() huma.Config {
 
 	cfg := huma.DefaultConfig("Url Shortener", version)
 	cfg.FieldsOptionalByDefault = false
-	cfg.Formats = map[string]huma.Format{"sonic": SonicJSON}
-	cfg.DefaultFormat = "sonic"
+
+	cfg.Formats = map[string]huma.Format{
+		"application/json": SonicJSON,
+	}
+
+	cfg.DefaultFormat = "application/json"
 
 	return cfg
 }
