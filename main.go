@@ -15,6 +15,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
+	"github.com/doganarif/govisual"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -39,9 +40,18 @@ func main() {
 	registerHandlers(api, handlers)
 
 	// Start server
+	router2 := govisual.Wrap(
+		router,
+		govisual.WithRequestBodyLogging(true),
+		govisual.WithResponseBodyLogging(true),
+		govisual.WithIgnorePaths("/favicon.ico"),
+		govisual.WithBasicAuth("admin", "admin"),
+		govisual.WithLocalhostOnly(),
+		govisual.WithMemoryStorage(),
+	)
 	server := &http.Server{
 		Addr:    ":8888",
-		Handler: router,
+		Handler: router2,
 
 		ReadTimeout:       time.Second * 5,
 		ReadHeaderTimeout: time.Second * 5,
@@ -129,7 +139,8 @@ func humaConfig() huma.Config {
 	cfg.FieldsOptionalByDefault = false
 
 	cfg.Formats = map[string]huma.Format{
-		"application/json": SonicJSON,
+		"application/json":         SonicJSON,
+		"application/problem+json": SonicJSON,
 	}
 
 	cfg.DefaultFormat = "application/json"
